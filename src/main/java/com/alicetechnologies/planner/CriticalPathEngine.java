@@ -31,6 +31,11 @@ public class CriticalPathEngine {
         evaluateTasks(sourceTasks);
     }
 
+    /**
+     * Evaluate the tasks, calculating the critical path and suggested start/end intervals
+     *
+     * @param sourceTasks original dataset
+     */
     public void evaluateTasks(final Collection<Task> sourceTasks) {
         tasks = sourceTasks.stream()
             .map(TaskEvaluated::new)
@@ -50,13 +55,14 @@ public class CriticalPathEngine {
     }
 
     public int getMaxCrewMembers() {
-        // split the
+        // find every single point of change within the total duration of planned tasks
         List<Integer> boundaries = tasks.stream()
             .flatMap(task -> Stream.of(task.getEarlyStart(), task.getEarlyFinish()))
             .distinct()
             .sorted()
             .collect(Collectors.toList());
 
+        // create consecutive ranges based on the points of change
         Map<Range<Integer>, Integer> crewMembers = new HashMap<>();
         List<Range<Integer>> ranges = IntStream.range(0, boundaries.size() - 1)
             .mapToObj(index -> {
@@ -80,12 +86,14 @@ public class CriticalPathEngine {
                 });
         });
 
-
         return crewMembers.values().stream()
             .mapToInt(value -> value)
             .max().orElse(0);
     }
 
+    /**
+     * Load actual {@link TaskEvaluated} instances based on task codes listed as dependencies.
+     */
     private void loadDependencies(final TaskEvaluated task) {
         final Set<String> dependentTaskCodes = task.getTask().getDependencies();
         final Set<TaskEvaluated> dependencies = dependentTaskCodes.stream()
@@ -164,11 +172,6 @@ public class CriticalPathEngine {
             }
         }
 
-        System.out.println("Initial nodes count: " + remaining.size());
-        System.out.print("Initial nodes: ");
-        for (TaskEvaluated task : remaining)
-            System.out.print(task.name + " ");
-        System.out.print("\n\n");
         return remaining;
     }
 
