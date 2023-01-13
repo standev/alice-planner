@@ -1,5 +1,6 @@
 package com.alicetechnologies.planner;
 
+import com.alicetechnologies.planner.plan.CrewMemberService;
 import com.alicetechnologies.planner.task.dto.Task;
 import com.alicetechnologies.planner.task.dto.TaskEvaluated;
 import com.alicetechnologies.planner.task.TaskRepository;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CriticalPathEngineTest {
 
+    CrewMemberService crewMemberService = new CrewMemberService();
 
     /**
      * dependency relationship is {@code C -> B -> A}
@@ -42,7 +44,7 @@ public class CriticalPathEngineTest {
             () -> assertEquals(12, engine.getTotalDuration()),
             () -> assertEquals("A, B, C", sequence(tasks)),
             () -> assertEquals("A[0-5], B[5-8], C[8-12]", timedSequence(tasks)),
-            () -> assertEquals(1, engine.getMaxCrewMembers()) // one flow with 1 member at any time
+            () -> assertEquals(1, crewMemberService.getMaxCrewMembers(tasks)) // one flow with 1 member at any time
         );
     }
 
@@ -79,7 +81,7 @@ public class CriticalPathEngineTest {
             () -> assertEquals("A[0-5], E[0-3], D[3-5], B[5-25], C[25-29]", timedSequence(tasks)),
 
             // flow E -> D intersects with flow A -> B -> C in duration of task A
-            () -> assertEquals(2, engine.getMaxCrewMembers())
+            () -> assertEquals(2, crewMemberService.getMaxCrewMembers(tasks))
         );
     }
 
@@ -90,7 +92,7 @@ public class CriticalPathEngineTest {
 
         assertAll(
             () -> assertEquals(1069, engine.getTotalDuration()),
-            () -> assertEquals(139, engine.getMaxCrewMembers())
+            () -> assertEquals(139, crewMemberService.getMaxCrewMembers(engine.getTasks()))
         );
     }
 

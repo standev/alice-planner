@@ -12,16 +12,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlannerController {
 
     final CriticalPathEngine criticalPathEngine;
+    final CrewMemberService crewMemberService;
 
-    public PlannerController(final CriticalPathEngine criticalPathEngine) {
+    public PlannerController(
+        final CriticalPathEngine criticalPathEngine,
+        final CrewMemberService crewMemberService
+    ) {
         this.criticalPathEngine = criticalPathEngine;
+        this.crewMemberService = crewMemberService;
     }
 
     @GetMapping
     public PlanResponseDto getPlan() {
         return PlanResponseDto.builder()
             .totalDuration(criticalPathEngine.getTotalDuration())
-            .maxCrewMembers(criticalPathEngine.getMaxCrewMembers())
+            .maxCrewMembers(crewMemberService.getMaxCrewMembers(criticalPathEngine.getTasks()))
             .build();
     }
 
