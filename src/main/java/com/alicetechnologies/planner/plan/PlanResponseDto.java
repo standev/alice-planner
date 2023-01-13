@@ -9,8 +9,8 @@ import lombok.Data;
 @AllArgsConstructor
 public class PlanResponseDto {
 
-    int totalDuration;
+    private int totalDuration;
 
-    int maxCrewMembers;
+    private int maxCrewMembers;
 
 }

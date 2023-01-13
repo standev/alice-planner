@@ -123,7 +123,7 @@ public class CriticalPathEngine {
                     final int maxCriticalCost = task.getDependencies().stream()
                         .mapToInt(TaskEvaluated::getCriticalCost)
                         .max().orElse(0);
-                    task.criticalCost = maxCriticalCost + task.cost;
+                    task.setCriticalCost(maxCriticalCost + task.getCost());
                     // set task as calculated and remove
                     completed.add(task);
                     it.remove();
@@ -147,18 +147,18 @@ public class CriticalPathEngine {
 
     private void calculateEarly(Set<TaskEvaluated> initials) {
         for (TaskEvaluated initial : initials) {
-            initial.earlyStart = 0;
-            initial.earlyFinish = initial.cost;
+            initial.setEarlyStart(0);
+            initial.setEarlyFinish(initial.getCost());
             setEarly(initial);
         }
     }
 
     private void setEarly(TaskEvaluated initial) {
-        int completionTime = initial.earlyFinish;
+        int completionTime = initial.getEarlyFinish();
         for (TaskEvaluated task : initial.getDependencies()) {
-            if (completionTime >= task.earlyStart) {
-                task.earlyStart = completionTime;
-                task.earlyFinish = completionTime + task.cost;
+            if (completionTime >= task.getEarlyStart()) {
+                task.setEarlyStart(completionTime);
+                task.setEarlyFinish(completionTime + task.getCost());
             }
             setEarly(task);
         }

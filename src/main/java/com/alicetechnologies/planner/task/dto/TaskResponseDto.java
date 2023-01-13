@@ -12,8 +12,8 @@ import lombok.Data;
 @Schema
 public class TaskResponseDto {
     @JsonUnwrapped
-    Task task;
+    private Task task;
 
-    long startInterval;
-    long endInterval;
+    private long startInterval;
+    private long endInterval;
 }

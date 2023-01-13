@@ -8,15 +8,15 @@ import java.util.Set;
 @Data
 public class TaskEvaluated implements Comparable<TaskEvaluated> {
     // the actual cost of the task
-    public int cost;
+    private int cost;
     // the cost of the task along the critical path
-    public int criticalCost;
+    private int criticalCost;
     // a name for the task for printing
-    public String name;
-    public int earlyStart;
-    public int earlyFinish;
-    public int latestStart;
-    public int latestFinish;
+    private String name;
+    private int earlyStart;
+    private int earlyFinish;
+    private int latestStart;
+    private int latestFinish;
 
     private Task task;
 

@@ -18,17 +18,17 @@ import java.util.Set;
 public class Task {
 
     @Schema(description = "unique task identifier")
-    String taskCode;
-    String operationName;
-    String elementName;
+    private String taskCode;
+    private String operationName;
+    private String elementName;
     @Schema(description = "the duration this task takes to complete, in time units")
-    int duration;
+    private int duration;
 
-    @Nullable Crew crew;
-    Set<Equipment> equipment;
+    private @Nullable Crew crew;
+    private Set<Equipment> equipment;
     @ArraySchema(arraySchema = @Schema(description = "all task codes of tasks that need to be completed before this task can start"))
     @Builder.Default
-    Set<String> dependencies = Set.of();
+    private Set<String> dependencies = Set.of();
 
     @Data
     @NoArgsConstructor
@@ -37,9 +37,9 @@ public class Task {
     @Schema
     public static class Crew {
         @Schema(description = "the type of the crew this task needs")
-        String name;
+        private String name;
         @Schema(description = "the number of crew members this task needs to be allocated to it for the whole task duration")
-        int assignment;
+        private int assignment;
     }
 
     @Data
@@ -47,7 +47,7 @@ public class Task {
     @AllArgsConstructor
     @Schema
     static class Equipment {
-        String name;
-        int quantity;
+        private String name;
+        private int quantity;
     }
 }
