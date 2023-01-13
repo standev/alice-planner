@@ -5,6 +5,7 @@ import com.alicetechnologies.planner.task.dto.TaskEvaluated;
 import com.google.common.collect.Range;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -73,22 +74,13 @@ public class CriticalPathEngine {
      * @return max number of crew members needed at some point
      */
     public int getMaxCrewMembers() {
-        // find every single point of change within the total duration of planned tasks
-        List<Integer> boundaries = tasks.stream()
-            .flatMap(task -> Stream.of(task.getEarlyStart(), task.getEarlyFinish()))
-            .distinct()
-            .sorted()
-            .collect(Collectors.toList());
+        // A[0-10], B[5-10] would result in points [0, 5, 10]
+        final List<Integer> timePoints = getAllTimePoints(tasks);
 
-        // create consecutive ranges based on the points of change
-        Map<Range<Integer>, Integer> crewMembers = new HashMap<>();
-        List<Range<Integer>> ranges = IntStream.range(0, boundaries.size() - 1)
-            .mapToObj(index -> {
-                final Integer from = boundaries.get(index);
-                final Integer to = boundaries.get(index + 1);
-                return Range.closedOpen(from, to);
-            })
-            .collect(Collectors.toList());
+        // [0, 5, 10] -> [[0, 5], [5, 10]]
+        final List<Range<Integer>> ranges = createConsecutiveRanges(timePoints);
+
+        final Map<Range<Integer>, Integer> crewMembers = new HashMap<>();
 
         tasks.forEach(task -> {
             final Range<Integer> taskRange = asRange(task);
@@ -109,8 +101,27 @@ public class CriticalPathEngine {
             .max().orElse(0);
     }
 
+    private static List<Integer> getAllTimePoints(final Collection<TaskEvaluated> tasks) {
+        return tasks.stream()
+            .flatMap(task -> Stream.of(task.getEarlyStart(), task.getEarlyFinish()))
+            .distinct()
+            .sorted()
+            .collect(Collectors.toList());
+    }
+
+    private static List<Range<Integer>> createConsecutiveRanges(final List<Integer> timePoints) {
+        return IntStream.range(0, timePoints.size() - 1)
+            .mapToObj(index -> {
+                final Integer from = timePoints.get(index);
+                final Integer to = timePoints.get(index + 1);
+                return Range.closedOpen(from, to);
+            })
+            .collect(Collectors.toList());
+    }
+
     /**
      * Load actual {@link TaskEvaluated} instances based on task codes listed as dependencies.
+     *
      */
     private void loadDependencies(final TaskEvaluated task) {
         final Set<String> dependentTaskCodes = task.getTask().getDependencies();
@@ -119,6 +130,9 @@ public class CriticalPathEngine {
             .collect(Collectors.toSet());
 
         task.setDependencies(dependencies);
+        for (TaskEvaluated dependency : dependencies) {
+            dependency.getBlocked().add(task);
+        }
     }
 
     /**
@@ -128,7 +142,7 @@ public class CriticalPathEngine {
     private void calculateCriticalPath() {
         // tasks whose critical cost has been calculated
         Set<TaskEvaluated> completed = new HashSet<>();
-        // tasks whose critical cost needs to be calculated
+        // tasks whose critical cost still needs to be calculated
         Set<TaskEvaluated> remaining = new HashSet<>(tasks);
 
         // Backflow algorithm
@@ -159,56 +173,67 @@ public class CriticalPathEngine {
                 throw new RuntimeException("Cyclic dependency, algorithm stopped!");
         }
 
-        // get the cost
-        setLatestIntervalForMaxCost();
+        maxCost = calculateMaxCost();
+        setLatestIntervalFor(maxCost);
+
         Set<TaskEvaluated> initialNodes = findInitialNodes(tasks);
-        calculateEarly(initialNodes);
+        calculateEarlyIntervals(initialNodes);
 
         assert completed.size() == tasks.size();
-    }
 
-    private void calculateEarly(Set<TaskEvaluated> initials) {
-        for (TaskEvaluated initial : initials) {
-            initial.setEarlyStart(0);
-            initial.setEarlyFinish(initial.getCost());
-            setEarly(initial);
-        }
-    }
-
-    private void setEarly(TaskEvaluated initial) {
-        int completionTime = initial.getEarlyFinish();
-        for (TaskEvaluated task : initial.getDependencies()) {
-            if (completionTime >= task.getEarlyStart()) {
-                task.setEarlyStart(completionTime);
-                task.setEarlyFinish(completionTime + task.getCost());
-            }
-            setEarly(task);
-        }
+        tasks = sortByExecutionOrder(tasks);
     }
 
     /**
-     * Find nodes (tasks) which are not dependencies of any other task.
+     * Find nodes (tasks) which are not blocked by any other task.
      */
-    private Set<TaskEvaluated> findInitialNodes(List<TaskEvaluated> tasks) {
+    protected Set<TaskEvaluated> findInitialNodes(List<TaskEvaluated> tasks) {
         Set<TaskEvaluated> remaining = new HashSet<>(tasks);
         for (TaskEvaluated task : tasks) {
-            for (TaskEvaluated dependency : task.getDependencies()) {
-                remaining.remove(dependency);
+            for (TaskEvaluated blocked : task.getBlocked()) {
+                remaining.remove(blocked);
             }
         }
 
         return remaining;
     }
 
+    private void calculateEarlyIntervals(Set<TaskEvaluated> initials) {
+        for (TaskEvaluated initial : initials) {
+            initial.setEarlyStart(0);
+            initial.setEarlyFinish(initial.getCost());
+            setEarlyInterval(initial);
+        }
+    }
+
+    private void setEarlyInterval(TaskEvaluated initial) {
+        int completionTime = initial.getEarlyFinish();
+        for (TaskEvaluated task : initial.getBlocked()) {
+            if (completionTime >= task.getEarlyStart()) {
+                task.setEarlyStart(completionTime);
+                task.setEarlyFinish(completionTime + task.getCost());
+            }
+            setEarlyInterval(task);
+        }
+    }
+
     /**
      * Modify {@code latestStart} and {@code latestFinish} for every task based on the max cost.
      */
-    private void setLatestIntervalForMaxCost() {
-        maxCost = tasks.stream()
+    private void setLatestIntervalFor(final int maxCost) {
+        tasks.forEach(task -> task.setLatestIntervalFor(maxCost));
+    }
+
+    private int calculateMaxCost() {
+        return tasks.stream()
             .mapToInt(TaskEvaluated::getCriticalCost)
             .max().orElse(0);
+    }
 
-        tasks.forEach(task -> task.setLatestIntervalFor(maxCost));
+    private List<TaskEvaluated> sortByExecutionOrder(final Collection<TaskEvaluated> tasks) {
+        return tasks.stream()
+            .sorted(Comparator.comparingInt(TaskEvaluated::getEarlyStart))
+            .collect(Collectors.toList());
     }
 
     private Range<Integer> asRange(final TaskEvaluated task) {
