@@ -32,7 +32,7 @@ public class TaskEvaluated implements Comparable<TaskEvaluated> {
         return task.getTaskCode();
     }
 
-    public void setLatestFor(final int maxCost) {
+    public void setLatestIntervalFor(final int maxCost) {
         latestStart = maxCost - criticalCost;
         latestFinish = latestStart + cost;
     }

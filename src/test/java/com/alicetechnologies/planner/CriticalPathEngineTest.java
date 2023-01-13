@@ -42,7 +42,7 @@ public class CriticalPathEngineTest {
             .collect(Collectors.joining(", "));
 
         assertAll(
-            () -> assertEquals(29, engine.getMaxCost()),
+            () -> assertEquals(29, engine.getTotalDuration()),
             () -> assertEquals("C, D, E, B, A", taskOrder), // this doesn't look right, I'd expect the opposite order
             () -> assertEquals("C=0, D=0, E=3, B=4, A=24", taskStarts),
             () -> assertEquals(2, engine.getMaxCrewMembers()) // flow D -> E intersects with flow C -> B -> A in duration of task C
@@ -55,7 +55,7 @@ public class CriticalPathEngineTest {
         CriticalPathEngine engine = new CriticalPathEngine(moreTasks);
 
         assertAll(
-            () -> assertEquals(1069, engine.getMaxCost()),
+            () -> assertEquals(1069, engine.getTotalDuration()),
             () -> assertEquals(242, engine.getMaxCrewMembers())
         );
     }

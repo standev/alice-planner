@@ -24,8 +24,16 @@ import java.util.stream.Stream;
  */
 public class CriticalPathEngine {
     private List<TaskEvaluated> tasks;
+
+    /**
+     * Internal task repository for quickly finding task by code
+     */
     private Map<String, TaskEvaluated> taskMap;
-    private int maxCost;
+
+    /**
+     * Stateful field which is calculated after the tasks are loaded and processed.
+     */
+    private int maxCost = Integer.MIN_VALUE;
 
     public CriticalPathEngine(final Collection<Task> sourceTasks) {
         evaluateTasks(sourceTasks);
@@ -50,10 +58,20 @@ public class CriticalPathEngine {
         return tasks;
     }
 
-    public int getMaxCost() {
+    /**
+     * Estimate the total duration of the project. It is equal to max cost in the critical path.
+     *
+     * @return total duration / max cost of the project
+     */
+    public int getTotalDuration() {
         return maxCost;
     }
 
+    /**
+     * Estimate how many crew members are needed at any given point of the project.
+     *
+     * @return max number of crew members needed at some point
+     */
     public int getMaxCrewMembers() {
         // find every single point of change within the total duration of planned tasks
         List<Integer> boundaries = tasks.stream()
@@ -103,6 +121,10 @@ public class CriticalPathEngine {
         task.setDependencies(dependencies);
     }
 
+    /**
+     * Estimate max cost of the project, also start/end intervals for the tasks.
+     * Using <a href="https://en.wikipedia.org/wiki/Critical_path_method">Critical path method</a>
+     */
     private void calculateCriticalPath() {
         // tasks whose critical cost has been calculated
         Set<TaskEvaluated> completed = new HashSet<>();
@@ -138,8 +160,8 @@ public class CriticalPathEngine {
         }
 
         // get the cost
-        setLatestForMaxCost();
-        Set<TaskEvaluated> initialNodes = initials(tasks);
+        setLatestIntervalForMaxCost();
+        Set<TaskEvaluated> initialNodes = findInitialNodes(tasks);
         calculateEarly(initialNodes);
 
         assert completed.size() == tasks.size();
@@ -164,7 +186,10 @@ public class CriticalPathEngine {
         }
     }
 
-    private Set<TaskEvaluated> initials(List<TaskEvaluated> tasks) {
+    /**
+     * Find nodes (tasks) which are not dependencies of any other task.
+     */
+    private Set<TaskEvaluated> findInitialNodes(List<TaskEvaluated> tasks) {
         Set<TaskEvaluated> remaining = new HashSet<>(tasks);
         for (TaskEvaluated task : tasks) {
             for (TaskEvaluated dependency : task.getDependencies()) {
@@ -175,13 +200,15 @@ public class CriticalPathEngine {
         return remaining;
     }
 
-    private void setLatestForMaxCost() {
+    /**
+     * Modify {@code latestStart} and {@code latestFinish} for every task based on the max cost.
+     */
+    private void setLatestIntervalForMaxCost() {
         maxCost = tasks.stream()
             .mapToInt(TaskEvaluated::getCriticalCost)
             .max().orElse(0);
 
-        System.out.println("Critical path length (cost): " + maxCost);
-        tasks.forEach(task -> task.setLatestFor(maxCost));
+        tasks.forEach(task -> task.setLatestIntervalFor(maxCost));
     }
 
     private Range<Integer> asRange(final TaskEvaluated task) {

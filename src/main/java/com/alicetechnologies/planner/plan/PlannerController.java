@@ -20,7 +20,7 @@ public class PlannerController {
     @GetMapping
     public PlanResponseDto getPlan() {
         return PlanResponseDto.builder()
-            .totalDuration(criticalPathEngine.getMaxCost())
+            .totalDuration(criticalPathEngine.getTotalDuration())
             .maxCrewMembers(criticalPathEngine.getMaxCrewMembers())
             .build();
     }
